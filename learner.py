@@ -76,15 +76,28 @@ class NeuralTS:
         self.context_list.append(torch.from_numpy(context.reshape(1, -1)).float())
         self.reward.append(reward)
         optimizer = optim.SGD(self.func.parameters(), lr=1e-2, weight_decay=self.lamdba)
-        for _ in range(10):
-            tot_loss = 0
-            for c, r in zip(self.context_list, self.reward):
+        length = len(self.reward)
+        index = np.arange(length)
+        np.random.shuffle(index)
+        cnt = 0
+        tot_loss = 0
+        while True:
+            batch_loss = 0
+            for idx in index:
+                c = self.context_list[idx]
+                r = self.reward[idx]
                 optimizer.zero_grad()
                 delta = self.func(c.cuda()) - r
                 loss = delta * delta
                 loss.backward()
                 optimizer.step()
+                batch_loss += loss.item()
                 tot_loss += loss.item()
-        return tot_loss / len(self.reward)
+                cnt += 1
+                if cnt >= 1000:
+                    return tot_loss / 1000
+            if batch_loss / length <= 1e-3:
+                return batch_loss / length
+        
 
 
