@@ -1,6 +1,5 @@
 from sklearn.datasets import fetch_openml
 from sklearn.utils import shuffle
-from sklearn.preprocessing import LabelBinarizer
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.preprocessing import normalize
 import numpy as np
@@ -27,7 +26,7 @@ class Bandit:
         else:
             raise RuntimeError('Dataset does not exist')
         # avoid nan, set nan as -1
-        X[np.isnan(X)] = np.min(X) - 1
+        X[np.isnan(X)] = - 1
         X = np.sqrt(r) * normalize(X)
         # Shuffle data
         if is_shuffle:
@@ -57,6 +56,7 @@ class Bandit:
         self.cursor = 0
 
 if __name__ == '__main__':
-    b = Bandit('mnist', r=0.3)
+    b = Bandit('mushroom', r=0.99)
     x_y, a = b.step()
-    print(np.linalg.norm(x_y, axis=1))
+    print(x_y[0])
+    print(x_y[1])
