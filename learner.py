@@ -30,7 +30,7 @@ class LinearTS:
 
 
 class Network(nn.Module):
-    def __init__(self, dim, hidden_size=1000):
+    def __init__(self, dim, hidden_size=100):
         super(Network, self).__init__()
         self.fc1 = nn.Linear(dim, hidden_size)
         self.activate = nn.ReLU()
@@ -39,21 +39,44 @@ class Network(nn.Module):
         return self.fc2(self.activate(self.fc1(x)))
 
 class NeuralTS:
-    def __init__(self, dim, lamdba=1, nu=1):
-        self.func = Network(dim, hidden_size=1000).cuda()
+    def __init__(self, dim, lamdba=1, nu=1, hidden=100):
+        self.func = Network(dim, hidden_size=hidden).cuda()
         self.context_list = []
         self.reward = []
         self.lamdba = lamdba
+        self.total_param = sum(p.numel() for p in self.func.parameters() if p.requires_grad)
+        self.U = lamdba * torch.eye(self.total_param).cuda()
+        self.Uinv = 1 / lamdba * torch.eye(self.total_param).cuda()
+        self.nu = nu
 
     def select(self, context):
         tensor = torch.from_numpy(context).float().cuda()
-        return torch.argmax(self.func(tensor)).item()
+        mu = self.func(tensor)
+        g_list = []
+        sampled = []
+        ave_sigma = 0
+        ave_rew = 0
+        for fx in mu:
+            self.func.zero_grad()
+            fx.backward(retain_graph=True)
+            g = torch.cat([p.grad.flatten().detach() for p in self.func.parameters()])
+            g_list.append(g)
+            sigma2 = torch.matmul(self.lamdba * self.nu * self.Uinv, g.reshape((-1,1)))
+            sigma = torch.sqrt(torch.matmul(g, sigma2))
+            sample_r = np.random.normal(loc=fx.item(), scale=sigma.item())
+            sampled.append(sample_r)
+            ave_sigma += sigma.item()
+            ave_rew += sample_r
+        arm = np.argmax(sampled)
+        self.U += torch.matmul(g_list[arm].reshape((-1,1)), g_list[arm].reshape((1,-1)))
+        self.Uinv = torch.inverse(self.U)
+        return arm, g_list[arm].norm().item(), ave_sigma, ave_rew
     
     def train(self, context, reward):
         self.context_list.append(torch.from_numpy(context.reshape(1, -1)).float())
         self.reward.append(reward)
-        optimizer = optim.Adam(self.func.parameters(), weight_decay=self.lamdba)
-        for _ in range(100):
+        optimizer = optim.SGD(self.func.parameters(), lr=1e-2, weight_decay=self.lamdba)
+        for _ in range(10):
             tot_loss = 0
             for c, r in zip(self.context_list, self.reward):
                 optimizer.zero_grad()
