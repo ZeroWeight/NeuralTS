@@ -1,5 +1,7 @@
-from data import Bandit
-from learner import LinearTS, NeuralTS
+from data_onehot import Bandit_onehot
+from learner_linear import LinearTS
+from learner_neural import NeuralTS
+from learner_diag import NeuralTSDiag
 import numpy as np
 import argparse
 import pickle 
@@ -10,15 +12,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Linear Thompson Sampling')
     parser.add_argument('--dataset', default='mushroom', metavar='DATASET', help='dataset used for training')
     parser.add_argument('--nu', type=float, default=1, metavar='v', help='nu for control variance')
-    parser.add_argument('--lamdba', type=float, default=1, metavar='r', help='lambda for regularzation')
+    parser.add_argument('--lamdba', type=float, default=0.001, metavar='r', help='lambda for regularzation')
     parser.add_argument('--shuffle', type=bool, default=1, metavar='1 / 0', help='shuffle the data set or not')
     parser.add_argument('--seed', type=int, default=0, help='random seed for shuffle, 0 for None')
     parser.add_argument('--hidden', type=int, default=100, help='random seed for shuffle, 0 for None')
     parser.add_argument('--r', type=float, default=0.9, metavar='r', help='ratio for feature norm')
     args = parser.parse_args()
     seed = None if args.seed == 0 else args.seed
-    b = Bandit(args.dataset, args.shuffle, args.seed, args.r)
-    l = NeuralTS(b.dim, args.lamdba, args.nu, args.hidden)
+    b = Bandit_onehot(args.dataset, args.shuffle, args.seed, args.r)
+    l = NeuralTSDiag(b.dim, args.lamdba, args.nu, args.hidden)
     rewards = []
     cache = 0
     for t in range(b.size):

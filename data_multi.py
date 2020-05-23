@@ -4,8 +4,8 @@ from sklearn.preprocessing import OrdinalEncoder
 from sklearn.preprocessing import normalize
 import numpy as np
 
-class Bandit:
-    def __init__(self, name, is_shuffle=True, seed=None, r=0.5):
+class Bandit_multi:
+    def __init__(self, name, is_shuffle=True, seed=None):
         # Fetch data
         if name == 'mnist':
             X, y = fetch_openml('mnist_784', version=1, return_X_y=True)
@@ -27,7 +27,7 @@ class Bandit:
             raise RuntimeError('Dataset does not exist')
         # avoid nan, set nan as -1
         X[np.isnan(X)] = - 1
-        X = np.sqrt(r) * normalize(X)
+        X = normalize(X)
         # Shuffle data
         if is_shuffle:
             self.X, self.y = shuffle(X, y, random_state=seed)
@@ -39,16 +39,17 @@ class Bandit:
         self.cursor = 0
         self.size = self.y.shape[0]
         self.n_arm = np.max(self.y_arm) + 1
-        self.dim = self.X.shape[1] + self.n_arm
-        self.eye = np.sqrt(1 - r) * np.eye(self.n_arm)
+        self.dim = self.X.shape[1] * self.n_arm
+        self.act_dim = self.X.shape[1]
 
     def step(self):
         assert self.cursor < self.size
-        x = self.X[self.cursor].reshape((1, -1)).repeat(self.n_arm, axis=0)
-        x_y = np.hstack((x, self.eye))
+        X = np.zeros((self.n_arm, self.dim))
+        for a in range(self.n_arm):
+            X[a, a * self.act_dim:a * self.act_dim + self.act_dim] = self.X[self.cursor]
         arm = self.y_arm[self.cursor][0]
         self.cursor += 1
-        return x_y, arm
+        return X, arm
 
     def finish(self):
         return self.cursor == self.size
@@ -56,7 +57,8 @@ class Bandit:
         self.cursor = 0
 
 if __name__ == '__main__':
-    b = Bandit('mushroom', r=0.99)
+    b = Bandit_multi('mushroom')
     x_y, a = b.step()
-    print(x_y[0])
-    print(x_y[1])
+    # print(x_y[0])
+    # print(x_y[1])
+    # print(np.linalg.norm(x_y[0]))
