@@ -1,23 +1,28 @@
 import numpy as np
 import scipy as sp
-import torch
-import torch.nn as nn
-import torch.optim as optim
 
 class LinearTS:
     # Brute-force Linear TS with full inverse
-    def __init__(self, dim, lamdba=1, nu=1):
+    def __init__(self, dim, lamdba=1, nu=1, style='ts'):
         self.dim = dim
         self.U = lamdba * np.eye(dim)
         self.Uinv = 1 / lamdba * np.eye(dim)
         self.nu = nu
         self.jr = np.zeros((dim, ))
         self.mu = np.zeros((dim, ))
+        self.lamdba = lamdba
+        self.style = style
 
     def select(self, context):
-        # theta = np.random.multivariate_normal(self.mu, self.nu * self.nu * self.Uinv)
-        theta = self.mu
-        return np.argmax(np.dot(context, theta))
+        if self.style == 'ts':
+            theta = np.random.multivariate_normal(self.mu, self.lamdba * self.nu * self.Uinv)
+            r = np.dot(context, theta)
+            return np.argmax(r), np.linalg.norm(theta), np.linalg.norm(theta - self.mu), np.mean(r)
+        elif self.style == 'ucb':
+            sig = np.diag(np.matmul(np.matmul(context, self.Uinv), context.T))
+            r = np.dot(context, self.mu) + np.sqrt(self.lamdba * self.nu) * sig
+            return np.argmax(r), np.linalg.norm(self.mu), np.mean(sig), np.mean(r)
+        
     
     def train(self, context, reward):
         self.jr += reward * context
@@ -27,3 +32,4 @@ class LinearTS:
         Linv, _ = sp.linalg.lapack.dpotri(zz)
         self.Uinv = np.triu(Linv) + np.triu(Linv, k=1).T
         self.mu = np.dot(self.Uinv, self.jr)
+        return 0

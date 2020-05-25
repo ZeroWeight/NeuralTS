@@ -14,7 +14,7 @@ class Network(nn.Module):
         return self.fc2(self.activate(self.fc1(x)))
         
 class NeuralTSDiag:
-    def __init__(self, dim, lamdba=1, nu=1, hidden=100):
+    def __init__(self, dim, lamdba=1, nu=1, hidden=100, style='ts'):
         self.func = Network(dim, hidden_size=hidden).cuda()
         self.context_list = []
         self.reward = []
@@ -22,6 +22,7 @@ class NeuralTSDiag:
         self.total_param = sum(p.numel() for p in self.func.parameters() if p.requires_grad)
         self.U = lamdba * torch.ones((self.total_param,)).cuda()
         self.nu = nu
+        self.style = style
 
     def select(self, context):
         tensor = torch.from_numpy(context).float().cuda()
@@ -37,7 +38,12 @@ class NeuralTSDiag:
             g_list.append(g)
             sigma2 = self.lamdba * self.nu * g * g / self.U
             sigma = torch.sqrt(torch.sum(sigma2))
-            sample_r = np.random.normal(loc=fx.item(), scale=sigma.item())
+            if self.style == 'ts':
+                sample_r = np.random.normal(loc=fx.item(), scale=sigma.item())
+            elif self.style == 'ucb':
+                sample_r = fx.item() + sigma.item()
+            else:
+                raise RuntimeError('Exploration style not set')
             sampled.append(sample_r)
             ave_sigma += sigma.item()
             ave_rew += sample_r

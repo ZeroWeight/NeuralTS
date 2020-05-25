@@ -48,8 +48,10 @@ class Bandit_multi:
         for a in range(self.n_arm):
             X[a, a * self.act_dim:a * self.act_dim + self.act_dim] = self.X[self.cursor]
         arm = self.y_arm[self.cursor][0]
+        rwd = np.zeros((self.n_arm,))
+        rwd[arm] = 1
         self.cursor += 1
-        return X, arm
+        return X, rwd
 
     def finish(self):
         return self.cursor == self.size

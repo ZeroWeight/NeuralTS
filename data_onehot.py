@@ -47,8 +47,10 @@ class Bandit_onehot:
         x = self.X[self.cursor].reshape((1, -1)).repeat(self.n_arm, axis=0)
         x_y = np.hstack((x, self.eye))
         arm = self.y_arm[self.cursor][0]
+        rwd = np.zeros((self.n_arm,))
+        rwd[arm] = 1
         self.cursor += 1
-        return x_y, arm
+        return x_y, rwd
 
     def finish(self):
         return self.cursor == self.size
