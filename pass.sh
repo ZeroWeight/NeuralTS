@@ -12,9 +12,9 @@ python3 train.py --encoding multi --learner linear --style ts --nu 1 --lamdba 1 
 python3 train.py --encoding multi --learner linear --style ucb --nu 10 --lamdba 1 --inv full --dataset letter
 python3 train.py --encoding multi --learner linear --style ts --nu 0.1 --lamdba 1 --inv full --dataset letter
 python3 train.py --encoding multi --learner linear --style ucb --nu 0.001 --lamdba 0.001 --inv diag --dataset mnist
-python3 train.py --encoding multi --learner linear --style ls --nu 0.001 --lamdba 0.001 --inv diag --dataset mnist
+python3 train.py --encoding multi --learner linear --style ts --nu 0.001 --lamdba 0.001 --inv diag --dataset mnist
 python3 train.py --encoding multi --learner linear --style ucb --nu 0.001 --lamdba 0.001 --inv diag --dataset isolet
-python3 train.py --encoding multi --learner linear --style ls --nu 0.001 --lamdba 0.001 --inv diag --dataset isolet
+python3 train.py --encoding multi --learner linear --style ts --nu 0.001 --lamdba 0.001 --inv diag --dataset isolet
 
 # Neural UCB / TS
 python3 train.py --encoding multi --learner neural --style ts --nu 0.00001 --lamdba 0.00001 --inv diag --dataset mushroom
