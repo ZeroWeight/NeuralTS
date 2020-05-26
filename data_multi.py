@@ -23,6 +23,8 @@ class Bandit_multi:
             X, y = fetch_openml('MagicTelescope', version=1, return_X_y=True)
         elif name == 'shuttle':
             X, y = fetch_openml('shuttle', version=1, return_X_y=True)
+        elif name == 'statlog':
+            X, y = fetch_openml('heart-statlog', version=1, return_X_y=True)
         else:
             raise RuntimeError('Dataset does not exist')
         # avoid nan, set nan as -1
