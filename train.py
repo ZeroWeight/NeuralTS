@@ -5,6 +5,7 @@ from learner_linear import LinearTS
 from learner_neural import NeuralTS
 from learner_diag import NeuralTSDiag
 from learner_kernel import KernelTS
+from neural_boost import Boost
 from learner_diag_kernel import KernelTSDiag
 from learner_diag_linear import LinearTSDiag
 import numpy as np
@@ -28,13 +29,16 @@ if __name__ == '__main__':
 
     parser.add_argument('--r', type=float, default=0.9, metavar='r', help='ratio for feature norm, encoding = onehot only')
 
-    parser.add_argument('--learner', default='linear', metavar='linear|neural|kernel', help='TS learner')
+    parser.add_argument('--learner', default='linear', metavar='linear|neural|kernel|boost', help='TS learner')
     parser.add_argument('--inv', default='diag', metavar='diag|full', help='inverse matrix method')
     parser.add_argument('--style', default='ts', metavar='ts|ucb', help='TS or UCB')
 
     parser.add_argument('--nu', type=float, default=1, metavar='v', help='nu for control variance')
     parser.add_argument('--lamdba', type=float, default=0.001, metavar='l', help='lambda for regularzation')    
     parser.add_argument('--hidden', type=int, default=100, help='network hidden size, learner = neural and diag only')
+
+    parser.add_argument('--p', type=float, default=0.8, help='p, learner = boost only')
+    parser.add_argument('--q', type=int, default=5, help='q, learner = boost only')
     
     args = parser.parse_args()
     use_seed = None if args.seed == 0 else args.seed
@@ -76,6 +80,9 @@ if __name__ == '__main__':
         else:
             RuntimeError('Inverse method not exist')
         ts_info = '{}_kernel_{:.3e}_{:.3e}_{}'.format(args.style, args.lamdba, args.nu, args.inv)
+    elif args.learner == 'boost':
+        l = Boost(b.dim, args.hidden, args.p, args.q)
+        ts_info = 'boost_{:.1e}_{}_{}'.format(args.p, args.q, args.hidden)
     else:
         raise RuntimeError('Learner not exist')
 
@@ -87,7 +94,7 @@ if __name__ == '__main__':
         reg = np.max(rwd) - r
         loss = l.train(context[arm_select], r)
         regrets.append(reg)
-        if t % 100 == 0:
+        if t % 1 == 0:
             print('{}: {:.3f}, {:.3e}, {:.3e}, {:.3e}, {:.3e}'.format(t, np.mean(regrets), loss, nrm, sig, ave_rwd))
 
     filename = '{:.3f}_{}_{}_{}.pkl'.format(np.mean(regrets), bandit_info, ts_info, time.time())

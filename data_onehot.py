@@ -9,25 +9,46 @@ class Bandit_onehot:
         # Fetch data
         if name == 'mnist':
             X, y = fetch_openml('mnist_784', version=1, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         elif name == 'mushroom':
             X, y = fetch_openml('mushroom', version=1, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         elif name == 'adult':
             X, y = fetch_openml('adult', version=2, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         elif name == 'covertype':
             X, y = fetch_openml('covertype', version=3, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         elif name == 'isolet':
             X, y = fetch_openml('isolet', version=1, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         elif name == 'letter':
             X, y = fetch_openml('letter', version=1, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         elif name == 'MagicTelescope':
             X, y = fetch_openml('MagicTelescope', version=1, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         elif name == 'shuttle':
             X, y = fetch_openml('shuttle', version=1, return_X_y=True)
+            # avoid nan, set nan as -1
+            X[np.isnan(X)] = - 1
+            X = np.sqrt(r) * normalize(X)
         else:
             raise RuntimeError('Dataset does not exist')
-        # avoid nan, set nan as -1
-        X[np.isnan(X)] = - 1
-        X = np.sqrt(r) * normalize(X)
         # Shuffle data
         if is_shuffle:
             self.X, self.y = shuffle(X, y, random_state=seed)
