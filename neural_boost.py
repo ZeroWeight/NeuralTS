@@ -36,7 +36,7 @@ class Boost:
     
     def train(self, context, reward):
         ret = 0
-        M = 10000
+        M = 100
         for q in range(self.q):
             if random.random() < self.p:
                 self.func[q].context_list.append(torch.from_numpy(context.reshape(1, -1)).float())
