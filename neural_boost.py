@@ -23,11 +23,16 @@ class Boost:
         self.q = q
         self.func = [Network(dim, hidden_size=hidden).cuda() for i in range(q)]
 
+
     def select(self, context):
-        tensor = torch.from_numpy(context).float().cuda()
-        mu = random.choice(self.func)(tensor).reshape((-1,))
-        arm = torch.argmax(mu)
-        return arm, 0, 0, 0
+        arms, _ = context.shape
+        if self.q == 1 and np.random.random()  < 0.05:
+            return np.random.randint(arms), 0, 0, 0
+        else:
+            tensor = torch.from_numpy(context).float().cuda()
+            mu = random.choice(self.func)(tensor).reshape((-1,))
+            arm = torch.argmax(mu)
+            return arm, 0, 0, 0
     
     def train(self, context, reward):
         ret = 0
