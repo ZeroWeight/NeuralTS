@@ -16,8 +16,8 @@ import time
 import torch
 
 if __name__ == '__main__':
-    torch.set_num_threads(4)
-    torch.set_num_interop_threads(4)
+    torch.set_num_threads(2)
+    torch.set_num_interop_threads(2)
     parser = argparse.ArgumentParser(description='Thompson Sampling')
     parser.add_argument('--encoding', default='multi', metavar='sanity|onehot|multi')
 
