@@ -2,56 +2,61 @@ import numpy as np
 import scipy as sp
 from sklearn.metrics.pairwise import rbf_kernel
 import torch
+from torch.distributions.multivariate_normal import MultivariateNormal
 
 class KernelTS:
     def __init__(self, dim, lamdba=1, nu=1, style='ts'):
         self.dim = dim
         self.lamdba = lamdba
         self.nu = nu
-        self.history_context = []
-        self.history_reward = []
+        self.x_t = None
+        self.r_t = None
         self.history_len = 0
         self.scale = self.lamdba * self.nu
         self.style = style
+        self.U_t = None
+        self.K_t = None
     
     def select(self, context):
         a, f = context.shape
         if self.history_len == 0:
-            mu = np.zeros((a,))
-            sigma = self.scale * np.ones((a,))
+            mu_t = torch.zeros((a,), device=torch.device('cuda'))
+            sigma_t = self.scale * torch.ones((a,), device=torch.device('cuda'))
         else:
-            X_history = np.array(self.history_context)
-            R_history = np.array(self.history_reward)
-            if self.history_len >= 1000:
-                k_t = torch.from_numpy(rbf_kernel(context, X_history)).cuda()
-                r_t = torch.from_numpy(R_history).cuda()
-                # (K_t + \lambda I)^{-1}
-                K_t = torch.from_numpy(rbf_kernel(X_history, X_history)).cuda()
-                U_t = torch.inverse(K_t + self.lamdba * torch.eye(self.history_len, device=torch.device('cuda'))) 
-                mu_t = k_t.matmul(U_t.matmul(r_t))
-                sigma_t = torch.diag(torch.ones((a,), device=torch.device('cuda')) - k_t.matmul(U_t.matmul(k_t.T)))
-                mu = mu_t.cpu().numpy()
-                sigma = sigma_t.cpu().numpy() * self.scale
-            else:
-                K_t = rbf_kernel(X_history, X_history)
-                k_t = rbf_kernel(context, X_history)
-                zz , _ = sp.linalg.lapack.dpotrf((self.lamdba * np.eye(self.history_len) + K_t), False, False)
-                Linv, _ = sp.linalg.lapack.dpotri(zz)
-                U_t = np.triu(Linv) + np.triu(Linv, k=1).T
-                mu = np.dot(k_t, np.dot(U_t, R_history))
-                sigma = np.zeros((a,))
-                for i in range(a):
-                    sigma[i] = self.scale * (1 - np.dot(k_t[i], U_t @ k_t[i]))
+            c_t = torch.from_numpy(context).float().cuda()
+            delta_t = c_t.reshape((a, 1, -1)) - self.x_t.reshape((1, self.history_len, -1))
+            k_t = torch.exp(- delta_t.norm(dim=2))
+            # print(k_t)
+            mu_t = k_t.matmul(self.U_t.matmul(self.r_t))
+            sigma_t = self.scale * (torch.ones((a,), device=torch.device('cuda')) - torch.diag(k_t.matmul(self.U_t.matmul(k_t.T))))
 
         if self.style == 'ts':
-            r = np.random.multivariate_normal(mu, np.diag(sigma))
+            r = MultivariateNormal(mu_t, torch.diag(sigma_t)).sample()
+            # print(r)
+            # print(mu_t)
+            # print(sigma_t)
         elif self.style == 'ucb':
-            r = mu + np.sqrt(sigma)
-        return np.argmax(r), 1, np.mean(sigma), np.mean(r)
+            r = mu_t + torch.sqrt(sigma_t)
+        return torch.argmax(r), 1, torch.mean(sigma_t), torch.max(r)
 
     def train(self, context, reward):
-        if self.history_len <= 4000:
-            self.history_context.append(context)
-            self.history_reward.append(reward)
+        f = context.shape[0]
+        if f < 1000 or self.history_len < 7000:
+            if self.x_t is None:
+                self.x_t = torch.from_numpy(context).float().cuda().reshape((1, -1))
+                self.r_t = torch.tensor(reward, device=torch.device('cuda'), dtype=torch.float).reshape((-1,))
+                self.K_t = torch.tensor(1, device=torch.device('cuda'), dtype=torch.float).reshape((1, 1))
+            else:
+                c_t = torch.from_numpy(context).float().cuda().reshape((1, -1))
+                r_t = torch.tensor(reward, device=torch.device('cuda'), dtype=torch.float).reshape((-1,))
+                delta_t = c_t.reshape((1, 1, -1)) - self.x_t.reshape((1, self.history_len, -1))
+                self.x_t = torch.cat((self.x_t, c_t), dim=0)
+                self.r_t = torch.cat((self.r_t, r_t), dim=0)
+                # print(self.x_t.shape, self.r_t.shape, self.K_t.shape)
+                k_t = torch.exp(- delta_t.norm(dim=2)).reshape((-1, 1))
+                a = torch.cat((k_t.T, torch.ones((1, 1), dtype=torch.float, device=torch.device('cuda'))), dim=1)
+                b = torch.cat((self.K_t, k_t), dim=1)
+                self.K_t = torch.cat((b, a) , dim=0)
             self.history_len += 1
+            self.U_t = torch.inverse(self.K_t + self.lamdba * torch.eye(self.history_len, device=torch.device('cuda'))) 
         return 0
