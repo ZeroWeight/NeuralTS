@@ -12,33 +12,36 @@ class Network(nn.Module):
         self.fc2 = nn.Linear(hidden_size, 1)
     def forward(self, x):
         return self.fc2(self.activate(self.fc1(x)))
-
-class NeuralTS:
+        
+class NeuralTSDiag:
     def __init__(self, dim, lamdba=1, nu=1, hidden=100, style='ts'):
         self.func = Network(dim, hidden_size=hidden).cuda()
+        self.func1 = Network(dim, hidden_size=hidden).cuda()
+        self.func1.load_state_dict(self.func.state_dict())
         self.context_list = []
         self.reward = []
         self.lamdba = lamdba
         self.total_param = sum(p.numel() for p in self.func.parameters() if p.requires_grad)
-        self.U = lamdba * torch.eye(self.total_param).cuda()
-        self.Uinv = 1 / lamdba * torch.eye(self.total_param).cuda()
+        self.U = lamdba * torch.ones((self.total_param,)).cuda()
         self.nu = nu
         self.style = style
 
     def select(self, context):
         tensor = torch.from_numpy(context).float().cuda()
         mu = self.func(tensor)
+
+        mu1 = self.func1(tensor)
         g_list = []
         sampled = []
         ave_sigma = 0
         ave_rew = 0
-        for fx in mu:
-            self.func.zero_grad()
+        for fx in mu1:
+            self.func1.zero_grad()
             fx.backward(retain_graph=True)
-            g = torch.cat([p.grad.flatten().detach() for p in self.func.parameters()])
+            g = torch.cat([p.grad.flatten().detach() for p in self.func1.parameters()])
             g_list.append(g)
-            sigma2 = torch.matmul(self.lamdba * self.nu * self.Uinv, g.reshape((-1,1)))
-            sigma = torch.sqrt(torch.matmul(g, sigma2))
+            sigma2 = self.lamdba * self.nu * g * g / self.U
+            sigma = torch.sqrt(torch.sum(sigma2))
             if self.style == 'ts':
                 sample_r = np.random.normal(loc=fx.item(), scale=sigma.item())
             elif self.style == 'ucb':
@@ -49,8 +52,7 @@ class NeuralTS:
             ave_sigma += sigma.item()
             ave_rew += sample_r
         arm = np.argmax(sampled)
-        self.U += torch.matmul(g_list[arm].reshape((-1,1)), g_list[arm].reshape((1,-1)))
-        self.Uinv = torch.inverse(self.U)
+        self.U += g_list[arm] * g_list[arm]
         return arm, g_list[arm].norm().item(), ave_sigma, ave_rew
     
     def train(self, context, reward):
