@@ -69,7 +69,7 @@ class NeuralTS:
         self.context_list.append(context)
         self.reward.append(reward)
         length = len(self.reward)
-        optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=1)
+        optimizer = optim.SGD(self.func.parameters(), lr=1e-2, weight_decay=1)
         C = torch.tensor(self.context_list, dtype=torch.float, device=torch.device('cuda'))
         R = torch.tensor(self.reward, dtype=torch.float, device=torch.device('cuda'))
         for _ in range(10):
