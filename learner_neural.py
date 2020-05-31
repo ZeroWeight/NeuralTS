@@ -13,7 +13,7 @@ class Network(nn.Module):
     def forward(self, x):
         return self.fc2(self.activate(self.fc1(x)))
         
-class NeuralTSDiag:
+class NeuralTS:
     def __init__(self, dim, lamdba=1, nu=1, hidden=100, style='ts'):
         self.func = Network(dim, hidden_size=hidden).cuda()
         self.func1 = Network(dim, hidden_size=hidden).cuda()
