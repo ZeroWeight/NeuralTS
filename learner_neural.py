@@ -26,6 +26,7 @@ class Network(nn.Module):
         nn.init.zeros_(self.fc2a.weight)
 
         self.fc1.weight.requires_grad = False
+        self.fc1.bias.requires_grad = False
         self.fc2.weight.requires_grad = False
     def forward(self, x):
         hidden = self.fc1(x) + self.fc1a(x)
