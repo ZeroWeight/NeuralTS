@@ -28,6 +28,7 @@ class Network(nn.Module):
         self.fc1.weight.requires_grad = False
         self.fc1.bias.requires_grad = False
         self.fc2.weight.requires_grad = False
+
     def forward(self, x):
         hidden = self.fc1(x) + self.fc1a(x)
         _x = self.activate(hidden)
@@ -51,22 +52,26 @@ class NeuralTS:
     def select(self, context):
         x = torch.tensor(context, dtype=torch.float, device=torch.device('cuda'))
         mu = self.func(x)
-        mu1 = self.func1(x)
+        mu1 = self.func1(tensor)
         g_list = []
         sampled = []
-        for j, fx in enumerate(mu):
+        sigmas = []
+        for j, fx in enumerate(mu1):
             self.func1.zero_grad()
-            mu1[j].backward(retain_graph=True)
+            fx.backward(retain_graph=True)
             g = torch.cat([p.grad.flatten().detach() if p.requires_grad else torch.tensor([], device=torch.device('cuda'))
              for p in self.func1.parameters()]) / math.sqrt(self.m)
             g_list.append(g)
             sigma2 = torch.sum(self.lamdba * self.nu * self.nu * g * g / self.U)
             sigma = torch.sqrt(sigma2)
+            sigmas.append(sigma)
             if self.style == 'ucb':
-                sampled.append(fx + sigma)
+                sampled.append(mu[j] + sigma)
             elif self.style == 'ts':
-                sampled.append(Normal(fx, sigma))
-        return np.argmax(sampled), 0, 0, 0
+                sampled.append(Normal(mu[j], sigma))
+        arms = np.argmax(sampled)
+        self.U += g_list[arms] * g_list[arms]
+        return arms, 0, np.mean(sigmas), 0
 
     def train(self, context, reward):
         self.context_list.append(context)
@@ -75,7 +80,7 @@ class NeuralTS:
         optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=1)
         C = torch.tensor(self.context_list, dtype=torch.float, device=torch.device('cuda'))
         R = torch.tensor(self.reward, dtype=torch.float, device=torch.device('cuda'))
-        train_len = 100 if length % 10 == 1 else 10
+        train_len = 1000 if length % 10 == 1 else 100
         for _ in range(train_len):
             Y = self.func(C).view(-1)
             optimizer.zero_grad()
@@ -83,4 +88,3 @@ class NeuralTS:
             loss.backward()
             optimizer.step()
         return loss.item()
-

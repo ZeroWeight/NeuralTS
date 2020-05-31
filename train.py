@@ -101,6 +101,6 @@ if __name__ == '__main__':
         if t % 10 == 0:
             print('{}: {:.3f}, {:.3e}, {:.3e}, {:.3e}, {:.3e}'.format(t, np.mean(regrets), loss, nrm, sig, ave_rwd))
 
-    filename = '{:.3f}_{}_{}_{}.pkl'.format(np.mean(regrets), bandit_info, ts_info, time.time())
+    filename = '{:.3f}_{}_{}_{}.pkl'.format(np.sum(regrets), bandit_info, ts_info, time.time())
     with open(os.path.join('record', filename), 'wb') as f:
         pickle.dump(regrets, f)

@@ -26,7 +26,9 @@ class Network(nn.Module):
         nn.init.zeros_(self.fc2a.weight)
 
         self.fc1.weight.requires_grad = False
+        self.fc1.bias.requires_grad = False
         self.fc2.weight.requires_grad = False
+
     def forward(self, x):
         hidden = self.fc1(x) + self.fc1a(x)
         _x = self.activate(hidden)
@@ -50,6 +52,7 @@ class NeuralTSDiag:
         mu = self.func(x)
         g_list = []
         sampled = []
+        sigmas = []
         for fx in mu:
             self.func.zero_grad()
             fx.backward(retain_graph=True)
@@ -58,11 +61,14 @@ class NeuralTSDiag:
             g_list.append(g)
             sigma2 = torch.sum(self.lamdba * self.nu * self.nu * g * g / self.U)
             sigma = torch.sqrt(sigma2)
+            sigmas.append(sigma.item())
             if self.style == 'ucb':
                 sampled.append(fx + sigma)
             elif self.style == 'ts':
                 sampled.append(Normal(fx, sigma))
-        return np.argmax(sampled), 0, 0, 0
+        arms = np.argmax(sampled)
+        self.U += g_list[arms] * g_list[arms]
+        return arms, 0, np.mean(sigmas), 0
 
     def train(self, context, reward):
         self.context_list.append(context)
@@ -75,8 +81,9 @@ class NeuralTSDiag:
         for _ in range(train_len):
             Y = self.func(C).view(-1)
             optimizer.zero_grad()
-            loss = 0.5 * f.mse_loss(Y, R, reduction='sum') / (self.lamdba * self.m)
-            loss.backward()
+            loss = f.mse_loss(Y, R, reduction='sum')
+            loss1 = 0.5 * loss / (self.lamdba * self.m)
+            loss1.backward()
             optimizer.step()
-        return loss.item()
+        return loss.item() / length
 
