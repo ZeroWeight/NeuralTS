@@ -74,7 +74,7 @@ class NeuralTSDiag:
         self.context_list.append(context)
         self.reward.append(reward)
         length = len(self.reward)
-        optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=1)
+        optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=self.lamdba * self.m)
         C = torch.tensor(self.context_list, dtype=torch.float, device=torch.device('cuda'))
         R = torch.tensor(self.reward, dtype=torch.float, device=torch.device('cuda'))
         train_len = 1000 if length % 10 == 1 else 100
@@ -82,7 +82,7 @@ class NeuralTSDiag:
             Y = self.func(C).view(-1)
             optimizer.zero_grad()
             loss = f.mse_loss(Y, R, reduction='sum')
-            loss1 = 0.5 * loss / (self.lamdba * self.m)
+            loss1 = 0.5 * loss
             loss1.backward()
             optimizer.step()
         return loss.item() / length
