@@ -32,16 +32,13 @@ class KernelTS:
 
         if self.style == 'ts':
             r = MultivariateNormal(mu_t, torch.diag(sigma_t)).sample()
-            # print(r)
-            # print(mu_t)
-            # print(sigma_t)
         elif self.style == 'ucb':
             r = mu_t + torch.sqrt(sigma_t)
         return torch.argmax(r), 1, torch.mean(sigma_t), torch.max(r)
 
     def train(self, context, reward):
         f = context.shape[0]
-        if f < 1000 or self.history_len < 7000:
+        if self.history_len < 1000:
             if self.x_t is None:
                 self.x_t = torch.from_numpy(context).float().cuda().reshape((1, -1))
                 self.r_t = torch.tensor(reward, device=torch.device('cuda'), dtype=torch.float).reshape((-1,))

@@ -98,7 +98,7 @@ if __name__ == '__main__':
         reg = np.max(rwd) - r
         loss = l.train(context[arm_select], r)
         regrets.append(reg)
-        if t % 10 == 0:
+        if t % 100 == 0:
             print('{}: {:.3f}, {:.3e}, {:.3e}, {:.3e}, {:.3e}'.format(t, np.sum(regrets), loss, nrm, sig, ave_rwd))
 
     filename = '{:.3f}_{}_{}_{}.pkl'.format(np.sum(regrets), bandit_info, ts_info, time.time())
