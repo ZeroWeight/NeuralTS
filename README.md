@@ -38,4 +38,4 @@
 
 ## Contract Information
 
-Please contact [Weitong Zhang](mailto:weightzero [at] g [dot] ucla [dot] edu) if you find any difficulty running this program, or finding any issue with the results. You can also start a new issue on this repo but I will check the issue less often than email.
+Please contact [Weitong Zhang](mailto:weightzero[at]g[dot]ucla[dot]edu) if you find any difficulty running this program, or finding any issue with the results. You can also start a new issue on this repo but I will check the issue less often than email.
