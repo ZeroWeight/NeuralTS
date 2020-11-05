@@ -1,10 +1,15 @@
 # Code for Neural Thompson Sampling
 
 > @article{zhang2020neural,
+>
 >  title={Neural Thompson Sampling},
+>
 >  author={Zhang, Weitong and Zhou, Dongruo and Li, Lihong and Gu, Quanquan},
+>
 >  journal={arXiv preprint arXiv:2010.00827},
+>
 >  year={2020}
+>
 >}
 
 ## Dependencies and Installation
