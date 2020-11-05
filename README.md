@@ -1,4 +1,4 @@
-# Code for Neural Thompson Sampling submitted to NIPS2020
+# Code for Neural Thompson Sampling submitted to 
 
 ## Dependencies and Installation
 
