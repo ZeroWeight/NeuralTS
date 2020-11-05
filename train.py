@@ -43,6 +43,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--p', type=float, default=0.8, help='p, learner = boost only')
     parser.add_argument('--q', type=int, default=5, help='q, learner = boost only')
+    parser.add_argument('--delay', type=int, default=0, help='delay reward')
     
     args = parser.parse_args()
     use_seed = None if args.seed == 0 else args.seed
@@ -89,6 +90,7 @@ if __name__ == '__main__':
         ts_info = 'boost_{:.1e}_{}_{}'.format(args.p, args.q, args.hidden)
     else:
         raise RuntimeError('Learner not exist')
+    setattr(l, 'delay', args.delay)
 
     regrets = []
     for t in range(min(args.size, b.size)):
@@ -101,6 +103,6 @@ if __name__ == '__main__':
         if t % 100 == 0:
             print('{}: {:.3f}, {:.3e}, {:.3e}, {:.3e}, {:.3e}'.format(t, np.sum(regrets), loss, nrm, sig, ave_rwd))
 
-    filename = '{:.3f}_{}_{}_{}.pkl'.format(np.sum(regrets), bandit_info, ts_info, time.time())
+    filename = '{:.3f}_{}_{}_delay_{}_{}.pkl'.format(np.sum(regrets), bandit_info, ts_info, args.delay, time.time())
     with open(os.path.join('record', filename), 'wb') as f:
         pickle.dump(regrets, f)

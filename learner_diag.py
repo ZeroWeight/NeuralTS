@@ -3,87 +3,71 @@ import scipy as sp
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import math
-import torch.nn.functional as f
-from torch.distributions.normal import Normal
+
 
 class Network(nn.Module):
-    def __init__(self, dim, m=100):
+    def __init__(self, dim, hidden_size=100):
         super(Network, self).__init__()
-        self.fc1 = nn.Linear(dim, m, bias=True)
-        self.fc1a = nn.Linear(dim, m, bias=True)
+        self.fc1 = nn.Linear(dim, hidden_size)
         self.activate = nn.ReLU()
-        self.fc2 = nn.Linear(m, 1, bias=False)
-        self.fc2a = nn.Linear(m, 1, bias=False)
-        self.scale = math.sqrt(m)
-        
-        layer_std = math.sqrt(2) / self.scale
-        nn.init.normal_(self.fc1.weight, mean=0.0, std=layer_std)
-        nn.init.normal_(self.fc1.bias, mean=0.0, std=layer_std)
-        nn.init.normal_(self.fc2.weight, mean=0.0, std=layer_std)
-        nn.init.zeros_(self.fc1a.weight)
-        nn.init.zeros_(self.fc1a.bias)
-        nn.init.zeros_(self.fc2a.weight)
-
-        self.fc1.weight.requires_grad = False
-        self.fc1.bias.requires_grad = False
-        self.fc2.weight.requires_grad = False
-
+        self.fc2 = nn.Linear(hidden_size, 1)
     def forward(self, x):
-        hidden = self.fc1(x) + self.fc1a(x)
-        _x = self.activate(hidden)
-        output = self.fc2(_x) + self.fc2a(_x)
-        return output * self.scale
-    
+        return self.fc2(self.activate(self.fc1(x)))
+        
 class NeuralTSDiag:
     def __init__(self, dim, lamdba=1, nu=1, hidden=100, style='ts'):
-        self.func = Network(dim, m=hidden).cuda()
-        self.context_list = []
-        self.reward = []
+        self.func = Network(dim, hidden_size=hidden).cuda()
+        self.context_list = None
+        self.len = 0
+        self.reward = None
         self.lamdba = lamdba
         self.total_param = sum(p.numel() for p in self.func.parameters() if p.requires_grad)
         self.U = lamdba * torch.ones((self.total_param,)).cuda()
         self.nu = nu
         self.style = style
-        self.m = hidden
+        self.loss_func = nn.MSELoss()
 
     def select(self, context):
-        x = torch.tensor(context, dtype=torch.float, device=torch.device('cuda'))
-        mu = self.func(x)
+        tensor = torch.from_numpy(context).float().cuda()
+        mu = self.func(tensor)
         g_list = []
         sampled = []
-        sigmas = []
+        ave_sigma = 0
+        ave_rew = 0
         for fx in mu:
             self.func.zero_grad()
             fx.backward(retain_graph=True)
-            g = torch.cat([p.grad.flatten().detach() if p.requires_grad else torch.tensor([], device=torch.device('cuda'))
-             for p in self.func.parameters()]) / math.sqrt(self.m)
+            g = torch.cat([p.grad.flatten().detach() for p in self.func.parameters()])
             g_list.append(g)
-            sigma2 = torch.sum(self.lamdba * self.nu * self.nu * g * g / self.U)
-            sigma = torch.sqrt(sigma2)
-            sigmas.append(sigma.item())
-            if self.style == 'ucb':
-                sampled.append(fx + sigma)
-            elif self.style == 'ts':
-                sampled.append(Normal(fx, sigma))
-        arms = np.argmax(sampled)
-        self.U += g_list[arms] * g_list[arms]
-        return arms, 0, np.mean(sigmas), 0
-
+            sigma2 = self.lamdba * self.nu * g * g / self.U
+            sigma = torch.sqrt(torch.sum(sigma2))
+            if self.style == 'ts':
+                sample_r = np.random.normal(loc=fx.item(), scale=sigma.item())
+            elif self.style == 'ucb':
+                sample_r = fx.item() + sigma.item()
+            else:
+                raise RuntimeError('Exploration style not set')
+            sampled.append(sample_r)
+            ave_sigma += sigma.item()
+            ave_rew += sample_r
+        arm = np.argmax(sampled)
+        self.U += g_list[arm] * g_list[arm]
+        return arm, g_list[arm].norm().item(), ave_sigma, ave_rew
+    
     def train(self, context, reward):
-        self.context_list.append(context)
-        self.reward.append(reward)
-        length = len(self.reward)
-        optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=self.lamdba * self.m)
-        C = torch.tensor(self.context_list, dtype=torch.float, device=torch.device('cuda'))
-        R = torch.tensor(self.reward, dtype=torch.float, device=torch.device('cuda'))
-        train_len = 1000 if length % 10 == 1 else 100
-        for _ in range(train_len):
-            Y = self.func(C).view(-1)
-            optimizer.zero_grad()
-            loss = f.mse_loss(Y, R, reduction='sum')
-            loss1 = 0.5 * loss
-            loss1.backward()
+        self.len += 1
+        optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=self.lamdba / self.len)
+        if self.context_list is None:
+            self.context_list = torch.from_numpy(context.reshape(1, -1)).to(device='cuda', dtype=torch.float32)
+            self.reward = torch.tensor([reward], device='cuda', dtype=torch.float32)
+        else:
+            self.context_list = torch.cat((self.context_list, torch.from_numpy(context.reshape(1, -1)).to(device='cuda', dtype=torch.float32)))
+            self.reward = torch.cat((self.reward, torch.tensor([reward], device='cuda', dtype=torch.float32)))
+        if self.len % self.delay != 0:
+            return 0
+        for _ in range(1000):
+            pred = self.func(self.context_list).view(-1)
+            loss = self.loss_func(pred, self.reward)
+            loss.backward()
             optimizer.step()
-        return loss.item() / length
-
+        return 0
