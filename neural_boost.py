@@ -22,6 +22,7 @@ class Boost:
         self.p = p
         self.q = q
         self.func = [Network(dim, hidden_size=hidden).cuda() for i in range(q)]
+        self.lossfunc = torch.nn.MSELoss()
 
 
     def select(self, context):
@@ -45,32 +46,11 @@ class Boost:
             if length == 0:
                 break
             optimizer = optim.SGD(self.func[q].parameters(), lr=1e-2)
-            index = np.arange(length)
-            np.random.shuffle(index)
-            cnt = 0
-            tot_loss = 0
-            while True:
-                batch_loss = 0
-                ex = False
-                for idx in index:
-                    c = self.func[q].context_list[idx]
-                    r = self.func[q].reward[idx]
-                    optimizer.zero_grad()
-                    delta = self.func[q](c.cuda()) - r
-                    loss = delta * delta
-                    loss.backward()
-                    optimizer.step()
-                    batch_loss += loss.item()
-                    tot_loss += loss.item()
-                    cnt += 1
-                    if cnt >= M:
-                        ret += tot_loss / M
-                        ex = True
-                        break
-
-                if batch_loss / length <= 1e-3:
-                    ret += batch_loss / length
-                    break
-                if ex:
-                    break
-        return ret / self.q
+            c = torch.cat([s for s in self.func[q].context_list]).cuda()
+            r = torch.Tensor(self.func[q].reward).float().cuda()
+            for _ in range(100):
+                optimizer.zero_grad()
+                loss = self.lossfunc(self.func[q](c).view(-1), r)
+                loss.backward()
+                optimizer.step()
+        return loss.item()
