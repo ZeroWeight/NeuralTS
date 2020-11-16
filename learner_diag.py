@@ -56,7 +56,7 @@ class NeuralTSDiag:
             self.reward = torch.cat((self.reward, torch.tensor([reward], device='cuda', dtype=torch.float32)))
         if self.len % self.delay != 0:
             return 0
-        for _ in range(100):
+        for _ in range(1000):
             pred = self.func(self.context_list).view(-1)
             loss = self.loss_func(pred, self.reward)
             loss.backward()
