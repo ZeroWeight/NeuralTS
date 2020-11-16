@@ -17,6 +17,7 @@ import torch
 
 
 if __name__ == '__main__':
+    t1 = time.time()
     torch.set_num_threads(8)
     torch.set_num_interop_threads(8)
     parser = argparse.ArgumentParser(description='Thompson Sampling')
@@ -43,7 +44,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--p', type=float, default=0.8, help='p, learner = boost only')
     parser.add_argument('--q', type=int, default=5, help='q, learner = boost only')
-    parser.add_argument('--delay', type=int, default=0, help='delay reward')
+    parser.add_argument('--delay', type=int, default=1, help='delay reward')
     
     args = parser.parse_args()
     use_seed = None if args.seed == 0 else args.seed
@@ -103,6 +104,6 @@ if __name__ == '__main__':
         if t % 100 == 0:
             print('{}: {:.3f}, {:.3e}, {:.3e}, {:.3e}, {:.3e}'.format(t, np.sum(regrets), loss, nrm, sig, ave_rwd))
 
-    filename = '{:.3f}_{}_{}_delay_{}_{}.pkl'.format(np.sum(regrets), bandit_info, ts_info, args.delay, time.time())
+    filename = '{:.3f}_{}_{}_delay_{}_{}.pkl'.format(np.sum(regrets), bandit_info, ts_info, args.delay, time.time() - t1)
     with open(os.path.join('record', filename), 'wb') as f:
         pickle.dump(regrets, f)

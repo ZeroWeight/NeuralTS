@@ -3,7 +3,8 @@ import scipy as sp
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+from backpack import backpack, extend
+from backpack.extensions import BatchGrad
 
 class Network(nn.Module):
     def __init__(self, dim, hidden_size=100):
@@ -16,7 +17,7 @@ class Network(nn.Module):
         
 class NeuralTSDiag:
     def __init__(self, dim, lamdba=1, nu=1, hidden=100, style='ts'):
-        self.func = Network(dim, hidden_size=hidden).cuda()
+        self.func = extend(Network(dim, hidden_size=hidden).cuda())
         self.context_list = None
         self.len = 0
         self.reward = None
@@ -30,33 +31,23 @@ class NeuralTSDiag:
     def select(self, context):
         tensor = torch.from_numpy(context).float().cuda()
         mu = self.func(tensor)
-        g_list = []
-        sampled = []
-        ave_sigma = 0
-        ave_rew = 0
-        for fx in mu:
-            self.func.zero_grad()
-            fx.backward(retain_graph=True)
-            g = torch.cat([p.grad.flatten().detach() for p in self.func.parameters()])
-            g_list.append(g)
-            sigma2 = self.lamdba * self.nu * g * g / self.U
-            sigma = torch.sqrt(torch.sum(sigma2))
-            if self.style == 'ts':
-                sample_r = np.random.normal(loc=fx.item(), scale=sigma.item())
-            elif self.style == 'ucb':
-                sample_r = fx.item() + sigma.item()
-            else:
-                raise RuntimeError('Exploration style not set')
-            sampled.append(sample_r)
-            ave_sigma += sigma.item()
-            ave_rew += sample_r
-        arm = np.argmax(sampled)
+        sum_mu = torch.sum(mu)
+        with backpack(BatchGrad()):
+            sum_mu.backward()
+        g_list = torch.cat([p.grad_batch.flatten(start_dim=1).detach() for p in self.func.parameters()], dim=1)
+        sigma = torch.sqrt(torch.sum(self.lamdba * self.nu * g_list * g_list / self.U, dim=1))
+        if self.style == 'ts':
+            var_r = torch.normal(sigma.view(-1))
+            sample_r = mu.view(-1) + var_r.view(-1)
+        elif self.style == 'ucb':
+            sample_r = mu.view(-1) + sigma.view(-1)
+        arm = torch.argmax(sample_r)
         self.U += g_list[arm] * g_list[arm]
-        return arm, g_list[arm].norm().item(), ave_sigma, ave_rew
+        return arm, g_list[arm].norm().item(), 0, 0
     
     def train(self, context, reward):
         self.len += 1
-        optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=self.lamdba / self.len)
+        optimizer = optim.SGD(self.func.parameters(), lr=1e-2, weight_decay=self.lamdba / self.len)
         if self.context_list is None:
             self.context_list = torch.from_numpy(context.reshape(1, -1)).to(device='cuda', dtype=torch.float32)
             self.reward = torch.tensor([reward], device='cuda', dtype=torch.float32)
@@ -65,7 +56,9 @@ class NeuralTSDiag:
             self.reward = torch.cat((self.reward, torch.tensor([reward], device='cuda', dtype=torch.float32)))
         if self.len % self.delay != 0:
             return 0
-        for _ in range(1000):
+        for _ in range(100):
+            self.func.zero_grad()
+            optimizer.zero_grad()
             pred = self.func(self.context_list).view(-1)
             loss = self.loss_func(pred, self.reward)
             loss.backward()
