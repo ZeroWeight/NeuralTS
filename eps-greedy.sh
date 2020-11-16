@@ -1,3 +1,4 @@
+source activate pytorch_latest_p37
 for((n=0;n<2;n++))
 do
 	python3 train.py --encoding multi --learner boost --p 1 --q 1 --dataset mushroom --hidden 100
