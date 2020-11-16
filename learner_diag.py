@@ -47,7 +47,7 @@ class NeuralTSDiag:
     
     def train(self, context, reward):
         self.len += 1
-        optimizer = optim.SGD(self.func.parameters(), lr=1e-2, weight_decay=self.lamdba / self.len)
+        optimizer = optim.SGD(self.func.parameters(), lr=1e-3, weight_decay=self.lamdba / self.len / 10)
         if self.context_list is None:
             self.context_list = torch.from_numpy(context.reshape(1, -1)).to(device='cuda', dtype=torch.float32)
             self.reward = torch.tensor([reward], device='cuda', dtype=torch.float32)
