@@ -1,8 +1,27 @@
-python3 train.py --encoding multi --learner boost --hidden 100 --p 0.8 --q 10 --dataset MagicTelescope
-python3 train.py --encoding multi --learner boost --hidden 100 --p 1 --q 1 --dataset mnist
-python3 train.py --encoding multi --learner boost --hidden 100 --p 1 --q 1 --dataset mushroom
-python3 train.py --encoding multi --learner boost --hidden 100 --p 1 --q 1 --dataset shuttle
-python3 train.py --encoding multi --learner boost --hidden 100 --p 1 --q 1 --dataset adult
-python3 train.py --encoding multi --learner boost --hidden 100 --p 1 --q 1 --dataset letter
-python3 train.py --encoding multi --learner boost --hidden 100 --p 1 --q 1 --dataset covertype
-python3 train.py --encoding multi --learner boost --hidden 100 --p 1 --q 1 --dataset MagicTelescope
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset mushroom
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset MagicTelescope
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset covertype
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset shuttle
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset adult
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset mnist
+
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset mushroom
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset MagicTelescope
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset covertype
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset shuttle
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset adult
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset mnist
+
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset mushroom
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset MagicTelescope
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset covertype
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset shuttle
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset adult
+python3 train.py --encoding multi --learner neural --style ucb --nu 0.0001 --lamdba 0.1 --inv diag --dataset mnist
+
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset mushroom
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset MagicTelescope
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset covertype
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset shuttle
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset adult
+python3 train.py --encoding multi --learner neural --style ts --nu 0.0001 --lamdba 0.1 --inv diag --dataset mnist
