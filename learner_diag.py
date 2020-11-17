@@ -37,8 +37,7 @@ class NeuralTSDiag:
         g_list = torch.cat([p.grad_batch.flatten(start_dim=1).detach() for p in self.func.parameters()], dim=1)
         sigma = torch.sqrt(torch.sum(self.lamdba * self.nu * g_list * g_list / self.U, dim=1))
         if self.style == 'ts':
-            var_r = torch.normal(sigma.view(-1))
-            sample_r = mu.view(-1) + var_r.view(-1)
+            sample_r = torch.normal(mu.view(-1), sigma.view(-1))
         elif self.style == 'ucb':
             sample_r = mu.view(-1) + sigma.view(-1)
         arm = torch.argmax(sample_r)
